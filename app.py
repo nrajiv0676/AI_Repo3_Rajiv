@@ -29,7 +29,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("home.html")
 
 @app.route("/EmpChurnPredict")
 def empchurn():
@@ -48,6 +48,9 @@ def brainTumorPredict():
 def malariaPredict():
     return render_template("malaria_predict.html")
 
+@app.route("/PneumoniaPredict")
+def pneumoniaPredict():
+    return render_template("pneumonia_predict.html")
 
 @app.route("/EmailSpamClassify")
 def emailSpamClassify():
@@ -328,6 +331,61 @@ def malariaPredictResult():
         return result
     return None
 
+
+######## Model Evaluation for Pneumonia Detection #####################
+
+def get_pneumoniaModel():
+    global pneumonia_model
+
+    pneumonia_model = load_model('models/pneumonia_model_vgg16_1.h5')
+
+    print('pneumonia model loaded')
+
+def pneumonia_model_predict(img_path, model):
+
+    print('inside pneumonia model_predict function')
+    img = image.load_img(img_path, target_size=(224, 224))
+
+    # Preprocessing the image
+    x = image.img_to_array(img)
+    x = np.expand_dims(x, axis=0)
+    img_data = x/255
+
+    preds = model.predict(img_data)
+    print('preds in pneumonia_model_predict')
+    print(preds)
+    return np.argmax(preds, axis=1)
+
+@app.route('/pneumoniaPredictResult', methods=['GET', 'POST'])
+def pneumoniaPredictResult():
+    if request.method == 'POST':
+        get_pneumoniaModel()
+        # Get the file from post request
+        print('inside pneumonia predict result')
+        f = request.files['file']
+
+        print(f)
+
+        # Save the file to ./uploads
+        basepath = os.path.dirname(__file__)
+        file_path = os.path.join(basepath, 'models/uploads', secure_filename(f.filename))
+        f.save(file_path)
+
+        print(file_path)
+
+        # Make prediction
+        preds = pneumonia_model_predict(file_path, pneumonia_model)
+
+        print('Pneumonia Predicted Values in result function: ')
+        print(preds)
+
+        label_list = ['Normal', 'Pneumonia']
+        result = label_list[np.asscalar(preds)]
+
+        print(result)
+
+        return result
+    return None
 
 
 ######## Model Evaluation for Email Spam classification #####################
